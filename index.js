@@ -4,6 +4,7 @@ const sqlite = require('sqlite'),
       express = require('express'),
       sqlite3 = require('sqlite3').verbose(),
       app = express();
+      fetch = require("node-fetch");
       // https = require("https"),
       // http = require("http");
 
@@ -31,13 +32,16 @@ function getFilmRecommendations(req, res) {
   db.all(`SELECT
     release_date, genre_id, title
     FROM films
-    WHERE id=${req.params.id}`, [], (err, films) => {
+    WHERE id=${req.params.id}`,
+      // release_date > 20030000
+    [], (err, films) => {
       // films.genre_id=${films.genre_id}
     if (err) {
       throw err;
     }
     films.forEach((films) => {
-      console.log(films.release_date);
+      if (films.release_date )
+      console.log('file date:', films.release_date);
       // if ()
     });
     res.setHeader('Content-Type', 'application/json');
@@ -48,13 +52,52 @@ function getFilmRecommendations(req, res) {
 function allReviews(req, res) {
   const film_Id = req.params.id;
   var url = `http://credentials-api.generalassemb.ly/4576f55f-c427-4cfc-a11c-5bfe914ca6c1?films=${film_Id}`
-  request.get(url, [], (error, response, body) => {
-    console.log(body);
+  fetch(url)
+    .then(response => {
+      response.json().then(json => {
+        var arr = [];
+        json.forEach((show) => {
+        console.log('length of reviews: ',show.reviews.length)
 
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200).json({body, meta: { limit: 10, offset: 0 }});
-  });
-}
+          if (show.reviews.length >= 5){
+            arr.push(show);
+            console.log('first rating is: ',arr[0].reviews[0].rating);
+          }
+
+        // arr.forEach((ratingOver4, index) =>{
+          var rating_arr = [];
+          console.log('first author:', arr[0].reviews[0].author)
+          for(var i = 0; i< arr[0].reviews.length; i++){
+          rating_arr.push(arr[0].reviews[i].rating)
+        }
+          const reducer = (accumulator, currentValue) => accumulator + currentValue;
+          console.log('sum is:', rating_arr)
+          var totalRating = rating_arr.reduce(reducer)/arr[0].reviews.length;
+          console.log('average:', totalRating)
+
+
+        res.setHeader('Content-Type', 'application/json');
+        res.status(200).json({arr, meta: { limit: 5, offset: 0 }});
+      })
+    })
+      })
+      .catch(error => {
+        console.log(error);
+      });
+    }
+
+
+
+// function allReviews(req, res) {
+//   const film_Id = req.params.id;
+//   var url = `http://credentials-api.generalassemb.ly/4576f55f-c427-4cfc-a11c-5bfe914ca6c1?films=${film_Id}`
+//   request.get(url, [], (error, response, body) => {
+//     console.log(body);
+//
+//     res.setHeader('Content-Type', 'application/json');
+//     res.status(200).json({body, meta: { limit: 10, offset: 0 }});
+//   });
+// }
 
 function allFilm(req, res) {
   db.all(sql, [], (err, films) => {
